@@ -24,9 +24,10 @@ use Behat\Behat\Context\Context;
 use Behat\Behat\Hook\Scope\BeforeScenarioScope;
 use Behat\Gherkin\Node\TableNode;
 use PHPUnit\Framework\Assert;
+use Psr\Http\Message\ResponseInterface;
 use TestHelpers\HttpRequestHelper;
 use TestHelpers\WebDavHelper;
-use Psr\Http\Message\ResponseInterface;
+use TestHelpers\BehatHelper;
 
 require_once 'bootstrap.php';
 
@@ -90,7 +91,7 @@ class FilesVersionsContext implements Context {
 				$endpoint,
 				null,
 				null,
-				'',
+				null,
 				"versions",
 				(string)$this->featureContext->getDavPathVersion(),
 				false,
@@ -148,7 +149,7 @@ class FilesVersionsContext implements Context {
 				$endpoint,
 				null,
 				null,
-				'',
+				null,
 				"versions",
 				(string)$this->featureContext->getDavPathVersion()
 			)
@@ -192,7 +193,7 @@ class FilesVersionsContext implements Context {
 			$this->getVersionsPathForFileId($fileId),
 			null,
 			$body,
-			'',
+			null,
 			null,
 			'2'
 		);
@@ -551,7 +552,7 @@ class FilesVersionsContext implements Context {
 			$properties,
 			$this->featureContext->getStepLineRef(),
 			(string) $folderDepth,
-			'',
+			null,
 			"versions"
 		);
 		return $response;
@@ -571,6 +572,6 @@ class FilesVersionsContext implements Context {
 		// Get the environment
 		$environment = $scope->getEnvironment();
 		// Get all the contexts you need in this context
-		$this->featureContext = $environment->getContext('FeatureContext');
+		$this->featureContext = BehatHelper::getContext($scope, $environment, 'FeatureContext');
 	}
 }

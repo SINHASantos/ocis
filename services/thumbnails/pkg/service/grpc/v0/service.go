@@ -116,10 +116,10 @@ func (g Thumbnail) GetThumbnail(ctx context.Context, req *thumbnailssvc.GetThumb
 	return nil
 }
 
-func (g Thumbnail) checkThumbnail(req *thumbnailssvc.GetThumbnailRequest, sRes *provider.StatResponse) (thumbnail.Request, error) {
+func (g Thumbnail) checkThumbnail(req *thumbnailssvc.GetThumbnailRequest, sRes *provider.StatResponse) (string, thumbnail.Request, error) {
 	tr := thumbnail.Request{}
 	if !sRes.GetInfo().GetPermissionSet().GetInitiateFileDownload() {
-		return tr, merrors.Forbidden(g.serviceID, "no download permission")
+		return "", tr, merrors.Forbidden(g.serviceID, "no download permission")
 	}
 
 	tType := thumbnail.GetExtForMime(sRes.GetInfo().GetMimeType())
@@ -128,13 +128,13 @@ func (g Thumbnail) checkThumbnail(req *thumbnailssvc.GetThumbnailRequest, sRes *
 	}
 	tr, err := thumbnail.PrepareRequest(int(req.GetWidth()), int(req.GetHeight()), tType, sRes.GetInfo().GetChecksum().GetSum(), req.GetProcessor())
 	if err != nil {
-		return tr, merrors.BadRequest(g.serviceID, err.Error())
+		return "", tr, merrors.BadRequest(g.serviceID, err.Error())
 	}
 
-	if _, exists := g.manager.CheckThumbnail(tr); exists {
-		return tr, nil
+	if key, exists := g.manager.CheckThumbnail(tr); exists {
+		return key, tr, nil
 	}
-	return tr, nil
+	return "", tr, nil
 }
 
 func (g Thumbnail) handleCS3Source(ctx context.Context, req *thumbnailssvc.GetThumbnailRequest) (string, error) {
@@ -144,9 +144,13 @@ func (g Thumbnail) handleCS3Source(ctx context.Context, req *thumbnailssvc.GetTh
 		return "", err
 	}
 
-	tr, err := g.checkThumbnail(req, sRes)
-	if err != nil {
+	key, tr, err := g.checkThumbnail(req, sRes)
+	switch {
+	case err != nil:
 		return "", err
+	case key != "":
+		// we have matching thumbnail already, use that
+		return key, nil
 	}
 
 	ctx = imgsource.ContextSetAuthorization(ctx, src.GetAuthorization())
@@ -164,7 +168,7 @@ func (g Thumbnail) handleCS3Source(ctx context.Context, req *thumbnailssvc.GetTh
 		return "", merrors.InternalServerError(g.serviceID, "could not get image")
 	}
 
-	key, err := g.manager.Generate(tr, img)
+	key, err = g.manager.Generate(tr, img)
 	if err != nil {
 		return "", err
 	}
@@ -219,10 +223,15 @@ func (g Thumbnail) handleWebdavSource(ctx context.Context, req *thumbnailssvc.Ge
 		return "", err
 	}
 
-	tr, err := g.checkThumbnail(req, sRes)
-	if err != nil {
+	key, tr, err := g.checkThumbnail(req, sRes)
+	switch {
+	case err != nil:
 		return "", err
+	case key != "":
+		// we have matching thumbnail already, use that
+		return key, nil
 	}
+
 	if src.GetWebdavAuthorization() != "" {
 		ctx = imgsource.ContextSetAuthorization(ctx, src.GetWebdavAuthorization())
 	}
@@ -248,7 +257,7 @@ func (g Thumbnail) handleWebdavSource(ctx context.Context, req *thumbnailssvc.Ge
 		return "", merrors.InternalServerError(g.serviceID, "could not get image")
 	}
 
-	key, err := g.manager.Generate(tr, img)
+	key, err = g.manager.Generate(tr, img)
 	if err != nil {
 		return "", err
 	}

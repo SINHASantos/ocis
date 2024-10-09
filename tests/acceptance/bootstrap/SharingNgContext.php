@@ -21,14 +21,15 @@
 
 use Behat\Behat\Context\Context;
 use Behat\Behat\Hook\Scope\BeforeScenarioScope;
+use Behat\Gherkin\Node\TableNode;
 use GuzzleHttp\Exception\GuzzleException;
+use PHPUnit\Framework\Assert;
 use Psr\Http\Message\ResponseInterface;
 use TestHelpers\GraphHelper;
 use TestHelpers\OcisHelper;
 use TestHelpers\WebDavHelper;
 use TestHelpers\HttpRequestHelper;
-use Behat\Gherkin\Node\TableNode;
-use PHPUnit\Framework\Assert;
+use TestHelpers\BehatHelper;
 
 require_once 'bootstrap.php';
 
@@ -50,14 +51,11 @@ class SharingNgContext implements Context {
 	 * @return void
 	 */
 	public function before(BeforeScenarioScope $scope): void {
-		if (OcisHelper::isTestingOnReva()) {
-			return;
-		}
 		// Get the environment
 		$environment = $scope->getEnvironment();
 		// Get all the contexts you need in this context from here
-		$this->featureContext = $environment->getContext('FeatureContext');
-		$this->spacesContext = $environment->getContext('SpacesContext');
+		$this->featureContext = BehatHelper::getContext($scope, $environment, 'FeatureContext');
+		$this->spacesContext = BehatHelper::getContext($scope, $environment, 'SpacesContext');
 	}
 
 	/**
@@ -351,7 +349,7 @@ class SharingNgContext implements Context {
 			$shareeId = "";
 			if ($shareType === "user") {
 				$shareeId = $this->featureContext->getAttributeOfCreatedUser($sharee, 'id');
-				if (isset($shareInfo['federatedServer'])) {
+				if (isset($rows['federatedServer'])) {
 					$shareeId = ($this->featureContext->ocmContext->getAcceptedUserByName($user, $sharee))['user_id'];
 				}
 			} elseif ($shareType === "group") {
@@ -436,6 +434,7 @@ class SharingNgContext implements Context {
 
 	/**
 	 * @When /^user "([^"]*)" sends the following space share invitation using permissions endpoint of the Graph API:$/
+	 * @When /^user "([^"]*)" tries to send the following space share invitation to federated user using permissions endpoint of the Graph API:$/
 	 *
 	 * @param string $user
 	 * @param TableNode $table
@@ -1429,6 +1428,7 @@ class SharingNgContext implements Context {
 
 	/**
 	 * @When /^user "([^"]*)" (?:tries to send|sends) the following space share invitation using root endpoint of the Graph API:$/
+	 * @When /^user "([^"]*)" tries to send the following space share invitation to federated user using root endpoint of the Graph API:$/
 	 *
 	 * @param string $user
 	 * @param TableNode $table

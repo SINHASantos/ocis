@@ -13,11 +13,12 @@ use Behat\Behat\Hook\Scope\BeforeScenarioScope;
 use Behat\Gherkin\Node\PyStringNode;
 use Behat\Gherkin\Node\TableNode;
 use GuzzleHttp\Exception\GuzzleException;
+use PHPUnit\Framework\Assert;
 use Psr\Http\Message\ResponseInterface;
 use TestHelpers\GraphHelper;
 use TestHelpers\WebDavHelper;
-use PHPUnit\Framework\Assert;
 use TestHelpers\HttpRequestHelper;
+use TestHelpers\BehatHelper;
 
 require_once 'bootstrap.php';
 
@@ -47,10 +48,8 @@ class GraphContext implements Context {
 		// Get the environment
 		$environment = $scope->getEnvironment();
 		// Get all the contexts you need in this context from here
-		$this->featureContext = $environment->getContext('FeatureContext');
-		if (!\TestHelpers\OcisHelper::isTestingOnReva()) {
-			$this->spacesContext = $environment->getContext('SpacesContext');
-		}
+		$this->featureContext = BehatHelper::getContext($scope, $environment, 'FeatureContext');
+		$this->spacesContext = BehatHelper::getContext($scope, $environment, 'SpacesContext');
 	}
 
 	/**
@@ -2806,7 +2805,7 @@ class GraphContext implements Context {
 	}
 
 	/**
-	 * @When /^user "([^"]*)" lists the activities of (?:folder|file) "([^"]*)" from space "([^"]*)" using the Graph API/
+	 * @When /^user "([^"]*)" lists the activities of (?:folder|file) "([^"]*)" from space "([^"]*)" using the Graph API$/
 	 *
 	 * @param string $user
 	 * @param string $resource
@@ -2937,7 +2936,7 @@ class GraphContext implements Context {
 	}
 
 	/**
-	 * @When /^user "([^"]*)" lists the activities of (?:folder|file) "([^"]*)" from space "([^"]*)" with (depth|limit|sort) "([^"]*)" using the Graph API/
+	 * @When /^user "([^"]*)" lists the activities of (?:folder|file) "([^"]*)" from space "([^"]*)" with (depth|limit|sort) "([^"]*)" using the Graph API$/
 	 *
 	 * @param string $user
 	 * @param string $resource
@@ -2978,6 +2977,39 @@ class GraphContext implements Context {
 			$actualActivity = $actualActivity->template->variables->resource->name . ":" . $actualActivity->template->message;
 			Assert::assertEquals($expectedActivity, $actualActivity, "Activity didn't match");
 		}
+	}
+
+	/**
+	 * @When /^user "([^"]*)" lists the activities of (?:folder|file) "([^"]*)" from space "([^"]*)" with (depth|limit) "([^"]*)" and sort "(asc|desc)" using the Graph API$/
+	 *
+	 * @param string $user
+	 * @param string $resource
+	 * @param string $spaceName
+	 * @param string $filterType
+	 * @param string $filterValue
+	 * @param string $sortType
+	 *
+	 * @return void
+	 * @throws GuzzleException
+	 */
+	public function userListsTheActivitiesOfResourceFromSpaceWithDepthOrLimitAndSortUsingTheGraphApi(
+		string $user,
+		string $resource,
+		string $spaceName,
+		string $filterType,
+		string $filterValue,
+		string $sortType
+	): void {
+		$resourceId = $this->spacesContext->getResourceId($user, $spaceName, $resource);
+		$response = GraphHelper::getActivities(
+			$this->featureContext->getBaseUrl(),
+			$this->featureContext->getStepLineRef(),
+			$user,
+			$this->featureContext->getPasswordForUser($user),
+			$resourceId,
+			[$filterType => $filterValue, 'sort' => $sortType],
+		);
+		$this->featureContext->setResponse($response);
 	}
 
 	/**

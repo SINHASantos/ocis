@@ -55,16 +55,41 @@ The following sections list the changes for unreleased.
 
 ## Summary
 
+* Bugfix - Fix health and ready endpoints: [#10163](https://github.com/owncloud/ocis/pull/10163)
 * Bugfix - Always treat LDAP attribute names case-insensitively: [#10204](https://github.com/owncloud/ocis/pull/10204)
 * Bugfix - Fix delete share panic: [#10219](https://github.com/owncloud/ocis/pull/10219)
 * Bugfix - Continue listing shares on error: [#10243](https://github.com/owncloud/ocis/pull/10243)
 * Bugfix - Avoid re-creating thumbnails: [#10251](https://github.com/owncloud/ocis/pull/10251)
+* Bugfix - Kept historical resource naming in activity: [#10266](https://github.com/owncloud/ocis/pull/10266)
+* Bugfix - Fix panic when sharing with groups: [#10279](https://github.com/owncloud/ocis/pull/10279)
 * Bugfix - Thumbnail request limit: [#10280](https://github.com/owncloud/ocis/pull/10280)
+* Bugfix - Forbid the ocm space sharing: [#10287](https://github.com/owncloud/ocis/pull/10287)
+* Bugfix - Use secure config defaults for OCM: [#10307](https://github.com/owncloud/ocis/pull/10307)
 * Enhancement - Add OCM wellknown configuration: [#9815](https://github.com/owncloud/ocis/pull/9815)
-* Enhancement - Bump reva to 2.xx.x: [#10236](https://github.com/owncloud/ocis/pull/10236)
 * Enhancement - Load IDP logo from theme: [#10274](https://github.com/owncloud/ocis/pull/10274)
+* Enhancement - WebOffice Templates: [#10276](https://github.com/owncloud/ocis/pull/10276)
+* Enhancement - Remove Deprecations: [#10305](https://github.com/owncloud/ocis/pull/10305)
+* Enhancement - Allow to use libvips for generating thumbnails: [#10310](https://github.com/owncloud/ocis/pull/10310)
+* Enhancement - Bump reva to 2.xx.x: [#10347](https://github.com/owncloud/ocis/pull/10347)
 
 ## Details
+
+* Bugfix - Fix health and ready endpoints: [#10163](https://github.com/owncloud/ocis/pull/10163)
+
+   We added new checks to the `/readyz` and `/healthz` endpoints to ensure that the
+   services are ready and healthy. This change ensures that the endpoints return
+   the correct status codes, which is needed to stabilize the k8s deployments.
+
+   https://github.com/owncloud/ocis/issues/10316
+   https://github.com/owncloud/ocis/issues/10281
+   https://github.com/owncloud/ocis/pull/10163
+   https://github.com/owncloud/ocis/pull/10301
+   https://github.com/owncloud/ocis/pull/10302
+   https://github.com/owncloud/ocis/pull/10303
+   https://github.com/owncloud/ocis/pull/10308
+   https://github.com/owncloud/ocis/pull/10323
+   https://github.com/owncloud/ocis/pull/10163
+   https://github.com/owncloud/ocis/pull/10333
 
 * Bugfix - Always treat LDAP attribute names case-insensitively: [#10204](https://github.com/owncloud/ocis/pull/10204)
 
@@ -94,6 +119,23 @@ The following sections list the changes for unreleased.
 
    https://github.com/owncloud/ocis/pull/10251
 
+* Bugfix - Kept historical resource naming in activity: [#10266](https://github.com/owncloud/ocis/pull/10266)
+
+   Kept historical resource naming after renaming in activity for shares and public
+   links.
+
+   https://github.com/owncloud/ocis/issues/10210
+   https://github.com/owncloud/ocis/pull/10266
+
+* Bugfix - Fix panic when sharing with groups: [#10279](https://github.com/owncloud/ocis/pull/10279)
+
+   We fixed a bug which caused a panic when sharing with groups, this only happened
+   under a heavy load. Besides the bugfix, we also reduced the number of share auto
+   accept log messages to avoid flooding the logs.
+
+   https://github.com/owncloud/ocis/issues/10258
+   https://github.com/owncloud/ocis/pull/10279
+
 * Bugfix - Thumbnail request limit: [#10280](https://github.com/owncloud/ocis/pull/10280)
 
    The `THUMBNAILS_MAX_CONCURRENT_REQUESTS` setting was not working correctly.
@@ -105,18 +147,22 @@ The following sections list the changes for unreleased.
    https://github.com/owncloud/ocis/pull/10280
    https://github.com/owncloud/ocis/pull/10225
 
+* Bugfix - Forbid the ocm space sharing: [#10287](https://github.com/owncloud/ocis/pull/10287)
+
+   We forbid adding the federated users as members of the space via items invite.
+
+   https://github.com/owncloud/ocis/issues/10051
+   https://github.com/owncloud/ocis/pull/10287
+
+* Bugfix - Use secure config defaults for OCM: [#10307](https://github.com/owncloud/ocis/pull/10307)
+
+   https://github.com/owncloud/ocis/pull/10307
+
 * Enhancement - Add OCM wellknown configuration: [#9815](https://github.com/owncloud/ocis/pull/9815)
 
    We now configure the `wellknown` service for OCM.
 
    https://github.com/owncloud/ocis/pull/9815
-
-* Enhancement - Bump reva to 2.xx.x: [#10236](https://github.com/owncloud/ocis/pull/10236)
-
-   TODO
-
-   https://github.com/owncloud/ocis/pull/10236
-   https://github.com/owncloud/ocis/pull/10216
 
 * Enhancement - Load IDP logo from theme: [#10274](https://github.com/owncloud/ocis/pull/10274)
 
@@ -124,6 +170,86 @@ The following sections list the changes for unreleased.
 
    https://github.com/owncloud/web/issues/11603
    https://github.com/owncloud/ocis/pull/10274
+
+* Enhancement - WebOffice Templates: [#10276](https://github.com/owncloud/ocis/pull/10276)
+
+   We are now able to use templates for WebOffice and use them as a starting point
+   for new documents.
+
+   We are supporting the following mime types:
+
+   ## OnlyOffice
+
+   - **MimeType:** `application/vnd.ms-word.template.macroenabled.12`
+   **TargetExtension:** `docx`
+
+   - **MimeType:** `application/vnd.oasis.opendocument.text-template`
+   **TargetExtension:** `docx`
+
+   - **MimeType:**
+   `application/vnd.openxmlformats-officedocument.wordprocessingml.template`
+   **TargetExtension:** `docx`
+
+   - **MimeType:** `application/vnd.oasis.opendocument.spreadsheet-template`
+   **TargetExtension:** `xlsx`
+
+   - **MimeType:** `application/vnd.ms-excel.template.macroenabled.12`
+   **TargetExtension:** `xlsx`
+
+   - **MimeType:**
+   `application/vnd.openxmlformats-officedocument.spreadsheetml.template`
+   **TargetExtension:** `xlsx`
+
+   - **MimeType:** `application/vnd.oasis.opendocument.presentation-template`
+   **TargetExtension:** `pptx`
+
+   - **MimeType:** `application/vnd.ms-powerpoint.template.macroenabled.12`
+   **TargetExtension:** `pptx`
+
+   - **MimeType:**
+   `application/vnd.openxmlformats-officedocument.presentationml.template`
+   **TargetExtension:** `pptx`
+
+   ## Collabora
+
+   - **MimeType:** `application/vnd.oasis.opendocument.spreadsheet-template`
+   **TargetExtension:** `ods`
+
+   - **MimeType:** `application/vnd.oasis.opendocument.text-template`
+   **TargetExtension:** `odt`
+
+   - **MimeType:** `application/vnd.oasis.opendocument.presentation-template`
+   **TargetExtension:** `odp`
+
+   https://github.com/owncloud/ocis/issues/9785
+   https://github.com/owncloud/ocis/pull/10276
+
+* Enhancement - Remove Deprecations: [#10305](https://github.com/owncloud/ocis/pull/10305)
+
+   Remove deprecated stores/caches/registries and envvars from the codebase.
+
+   https://github.com/owncloud/ocis/pull/10305
+
+* Enhancement - Allow to use libvips for generating thumbnails: [#10310](https://github.com/owncloud/ocis/pull/10310)
+
+   To improve performance (and to be able to support a wider range of images
+   formats in the future) the thumbnails service is now able to utilize libvips
+   (https://www.libvips.org/) for generating thumbnails. Enabling the use of
+   libvips is implemented as a build-time option which is currently disabled for
+   the "bare-metal" build of the ocis binary and enabled for the docker image
+   builds.
+
+   https://github.com/owncloud/ocis/pull/10310
+
+* Enhancement - Bump reva to 2.xx.x: [#10347](https://github.com/owncloud/ocis/pull/10347)
+
+   TODO
+
+   https://github.com/owncloud/ocis/pull/10347
+   https://github.com/owncloud/ocis/pull/10321
+   https://github.com/owncloud/ocis/pull/10236
+   https://github.com/owncloud/ocis/pull/10216
+   https://github.com/owncloud/ocis/pull/10315
 
 # Changelog for [6.5.0] (2024-10-01)
 

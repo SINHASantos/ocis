@@ -1,17 +1,31 @@
 package debug
 
 import (
-	"io"
+	"context"
 	"net/http"
 
+	"github.com/owncloud/ocis/v2/ocis-pkg/checks"
+	"github.com/owncloud/ocis/v2/ocis-pkg/handlers"
 	"github.com/owncloud/ocis/v2/ocis-pkg/service/debug"
 	"github.com/owncloud/ocis/v2/ocis-pkg/version"
-	"github.com/owncloud/ocis/v2/services/search/pkg/config"
 )
 
 // Server initializes the debug service and server.
 func Server(opts ...Option) (*http.Server, error) {
 	options := newOptions(opts...)
+
+	healthHandlerConfiguration := handlers.NewCheckHandlerConfiguration().
+		WithLogger(options.Logger).
+		WithCheck("grpc reachability", checks.NewGRPCCheck(options.Config.GRPC.Addr))
+
+	readyHandlerConfiguration := healthHandlerConfiguration.
+		WithCheck("nats reachability", checks.NewNatsCheck(options.Config.Events.Cluster)).
+		WithCheck("tika-check", func(ctx context.Context) error {
+			if options.Config.Extractor.Type == "tika" {
+				return checks.NewTCPCheck(options.Config.Extractor.Tika.TikaURL)(ctx)
+			}
+			return nil
+		})
 
 	return debug.NewService(
 		debug.Logger(options.Logger),
@@ -21,39 +35,7 @@ func Server(opts ...Option) (*http.Server, error) {
 		debug.Token(options.Config.Debug.Token),
 		debug.Pprof(options.Config.Debug.Pprof),
 		debug.Zpages(options.Config.Debug.Zpages),
-		debug.Health(health(options.Config)),
-		debug.Ready(ready(options.Config)),
+		debug.Health(handlers.NewCheckHandler(healthHandlerConfiguration)),
+		debug.Ready(handlers.NewCheckHandler(readyHandlerConfiguration)),
 	), nil
-}
-
-// health implements the health check.
-func health(cfg *config.Config) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-
-		// TODO: check if services are up and running
-
-		_, err := io.WriteString(w, http.StatusText(http.StatusOK))
-		// io.WriteString should not fail but if it does, we want to know.
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-
-// ready implements the ready check.
-func ready(cfg *config.Config) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-
-		// TODO: check if services are up and running
-
-		_, err := io.WriteString(w, http.StatusText(http.StatusOK))
-		// io.WriteString should not fail but if it does, we want to know.
-		if err != nil {
-			panic(err)
-		}
-	}
 }

@@ -3,7 +3,6 @@ package thumbnail
 import (
 	"bytes"
 	"image"
-	"image/gif"
 	"mime"
 
 	"github.com/owncloud/ocis/v2/ocis-pkg/log"
@@ -35,7 +34,6 @@ type Request struct {
 	Encoder    Encoder
 	Generator  Generator
 	Checksum   string
-	Processor  Processor
 }
 
 // Manager is responsible for generating thumbnails
@@ -71,22 +69,19 @@ type SimpleManager struct {
 // Generate creates a thumbnail and stores it
 func (s SimpleManager) Generate(r Request, img interface{}) (string, error) {
 	var match image.Rectangle
-	var inputDimensions image.Rectangle
-	switch m := img.(type) {
-	case *gif.GIF:
-		match = s.resolutions.ClosestMatch(r.Resolution, m.Image[0].Bounds())
-		inputDimensions = m.Image[0].Bounds()
-	case image.Image:
-		match = s.resolutions.ClosestMatch(r.Resolution, m.Bounds())
-		inputDimensions = m.Bounds()
+
+	inputDimensions, err := r.Generator.Dimensions(img)
+	if err != nil {
+		return "", err
 	}
+	match = s.resolutions.ClosestMatch(r.Resolution, inputDimensions)
 
 	// validate max input image dimensions - 6016x4000
 	if inputDimensions.Size().X > s.maxDimension.X || inputDimensions.Size().Y > s.maxDimension.Y {
 		return "", errors.ErrImageTooLarge
 	}
 
-	thumbnail, err := r.Generator.Generate(match, img, r.Processor)
+	thumbnail, err := r.Generator.Generate(match, img)
 	if err != nil {
 		return "", err
 	}
@@ -120,7 +115,7 @@ func mapToStorageRequest(r Request) storage.Request {
 		Checksum:       r.Checksum,
 		Resolution:     r.Resolution,
 		Types:          r.Encoder.Types(),
-		Characteristic: r.Processor.ID(),
+		Characteristic: r.Generator.ProcessorID(),
 	}
 }
 
@@ -136,15 +131,11 @@ func IsMimeTypeSupported(m string) bool {
 
 // PrepareRequest prepare the request based on image parameters
 func PrepareRequest(width, height int, tType, checksum, pID string) (Request, error) {
-	generator, err := GeneratorForType(tType)
+	generator, err := GeneratorFor(tType, pID)
 	if err != nil {
 		return Request{}, err
 	}
 	encoder, err := EncoderForType(tType)
-	if err != nil {
-		return Request{}, err
-	}
-	processor, err := ProcessorFor(pID, tType)
 	if err != nil {
 		return Request{}, err
 	}
@@ -154,6 +145,5 @@ func PrepareRequest(width, height int, tType, checksum, pID string) (Request, er
 		Generator:  generator,
 		Encoder:    encoder,
 		Checksum:   checksum,
-		Processor:  processor,
 	}, nil
 }
